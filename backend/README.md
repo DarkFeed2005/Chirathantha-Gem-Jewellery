@@ -93,7 +93,50 @@ This is the strongest verification so far — not just "compiles," but
 "behaves correctly against a real database under the actual failure
 and race conditions the code was written to guard against."
 
-## New in Step 3: Signup, Login & Admin Bootstrap
+## New in Step 3.5: Server-Side Pricing Engine
+
+The client's `estimated_price` is **never trusted** for the actual
+charge anymore. `internal/service/pricing.go` computes the authoritative
+total from a fixed catalog (category base price × metal multiplier +
+gemstone flat fee + engraving base+per-char fee), and
+`OrderService.SubmitCustomOrder` overwrites whatever the client sent
+before it ever reaches the database. `POST /api/v1/orders/custom` now
+returns `{"order": {...}, "pricing": {...}}` — the breakdown alongside
+the order — instead of just the bare order.
+
+A new public `GET /api/v1/pricing/catalog` endpoint exposes the raw
+pricing tables read-only, so the frontend's "client-side price
+estimation" isn't a hand-copied second source of truth that can drift —
+it fetches the real numbers and computes against them.
+
+**Bug found and fixed while wiring up the frontend form:** `orders.shipping_address`
+is a `JSONB` column, but nothing before this step ever sent a real
+request with that field populated (every test so far omitted it, and
+`NULL` is valid JSONB either way) — so a plain address string like
+`"221B Galle Road"` would have hit Postgres's `invalid input syntax for
+type json` and surfaced as a confusing 500. Fixed by validating
+`shipping_address` as JSON in `validateCustomOrderRequest` (returns a
+clean 400 with an example, same as any other bad input) rather than
+letting Postgres reject it deep in the transaction. Verified against a
+real DB: a plain string is now rejected at the API boundary with a
+helpful message, and `{"raw": "..."}` round-trips correctly.
+
+### Verification (same real-Postgres approach as before)
+
+- `GET /pricing/catalog` — confirmed the JSON response matches the Go
+  source maps exactly.
+- Submitted a real custom order (ring, rose gold, sapphire, 5-character
+  engraving) with a deliberately wrong `estimated_price: 1.00` — server
+  computed **$582.50** (`150 × 2.5 + 180 + (20 + 5×1.5)`), used that for
+  both `orders.total_amount` and `order_items.unit_price`, and logged a
+  `WARN` about the client/server price mismatch — the diagnostic signal
+  worked exactly as designed.
+- Unrecognized metal (`"unobtainium"`) → 400 with the list of supported
+  metals in the error message.
+- Non-JSON `shipping_address` → 400; valid JSON → round-trips correctly
+  on fetch.
+
+
 
 ### Endpoints
 
