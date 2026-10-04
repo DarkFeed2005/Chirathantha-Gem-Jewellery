@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gemstore/internal/models"
@@ -113,6 +114,39 @@ func (r *ProductRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	}
 	if err != nil {
 		return nil, fmt.Errorf("repository: get product by id: %w", err)
+	}
+
+	return &p, nil
+}
+
+// ErrSKUTaken mirrors ErrEmailTaken's approach — detected via the
+// unique-constraint error code rather than a check-then-insert, so two
+// concurrent creates for the same SKU can't both succeed.
+var ErrSKUTaken = errors.New("repository: sku already exists")
+
+// Create inserts a new ready-made catalogue product. There's no admin
+// UI for product management yet (see cmd/seedproducts for the current
+// bulk-insert workaround), so this is the one place a product ever gets
+// created.
+func (r *ProductRepository) Create(ctx context.Context, p models.Product) (*models.Product, error) {
+	const query = `
+		INSERT INTO products
+			(sku, name, description, category, gender, metal_type,
+			 gemstone_type, base_price, stock_quantity, image_url, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		RETURNING id, created_at, updated_at`
+
+	err := r.pool.QueryRow(ctx, query,
+		p.SKU, p.Name, p.Description, p.Category, p.Gender, p.MetalType,
+		p.GemstoneType, p.BasePrice, p.StockQuantity, p.ImageURL, p.IsActive,
+	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			return nil, ErrSKUTaken
+		}
+		return nil, fmt.Errorf("repository: create product: %w", err)
 	}
 
 	return &p, nil
