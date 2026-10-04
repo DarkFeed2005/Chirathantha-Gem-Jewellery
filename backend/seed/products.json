@@ -1,0 +1,74 @@
+[
+  {
+    "sku": "RING-001",
+    "name": "Classic Solitaire Ring",
+    "description": "A timeless solitaire in 18k yellow gold, designed to catch the light from every angle.",
+    "category": "ring",
+    "gender": "women",
+    "metal_type": "yellow gold",
+    "gemstone_type": "diamond",
+    "base_price": 650.00,
+    "stock_quantity": 4,
+    "image_url": "/images/products/ring-001.jpg"
+  },
+  {
+    "sku": "RING-002",
+    "name": "Signet Band",
+    "description": "A substantial platinum signet band with a brushed finish.",
+    "category": "ring",
+    "gender": "men",
+    "metal_type": "platinum",
+    "gemstone_type": "",
+    "base_price": 420.00,
+    "stock_quantity": 6,
+    "image_url": "/images/products/ring-002.jpg"
+  },
+  {
+    "sku": "BRACELET-001",
+    "name": "Tennis Bracelet",
+    "description": "A classic line of pave-set sapphires in white gold.",
+    "category": "bracelet",
+    "gender": "women",
+    "metal_type": "white gold",
+    "gemstone_type": "sapphire",
+    "base_price": 780.00,
+    "stock_quantity": 3,
+    "image_url": "/images/products/bracelet-001.jpg"
+  },
+  {
+    "sku": "BRACELET-002",
+    "name": "Curb Chain Bracelet",
+    "description": "A hand-finished sterling silver curb chain, unisex sizing.",
+    "category": "bracelet",
+    "gender": "unisex",
+    "metal_type": "silver",
+    "gemstone_type": "",
+    "base_price": 180.00,
+    "stock_quantity": 10,
+    "image_url": "/images/products/bracelet-002.jpg"
+  },
+  {
+    "sku": "NECKLACE-001",
+    "name": "Emerald Drop Pendant",
+    "description": "A single emerald drop on a fine rose gold chain.",
+    "category": "necklace",
+    "gender": "women",
+    "metal_type": "rose gold",
+    "gemstone_type": "emerald",
+    "base_price": 590.00,
+    "stock_quantity": 5,
+    "image_url": "/images/products/necklace-001.jpg"
+  },
+  {
+    "sku": "NECKLACE-002",
+    "name": "Rope Chain",
+    "description": "A heavyweight yellow gold rope chain, 22 inches.",
+    "category": "necklace",
+    "gender": "men",
+    "metal_type": "yellow gold",
+    "gemstone_type": "",
+    "base_price": 510.00,
+    "stock_quantity": 4,
+    "image_url": "/images/products/necklace-002.jpg"
+  }
+]
