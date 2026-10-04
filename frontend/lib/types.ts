@@ -27,6 +27,38 @@ export interface User {
   updated_at: string;
 }
 
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  description?: string;
+  category: JewelryCategory;
+  gender: Gender;
+  metal_type?: string;
+  gemstone_type?: string;
+  base_price: number;
+  stock_quantity: number;
+  image_url?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customization {
+  id: string;
+  user_id: string;
+  category: JewelryCategory;
+  gender: Gender;
+  metal_type: string;
+  gemstone_type?: string;
+  size?: string;
+  engraving_text?: string;
+  preview_image_url?: string;
+  estimated_price?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;
@@ -35,6 +67,11 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   created_at: string;
+  // Populated by the backend so a client can render "Ring — Rose Gold,
+  // Sapphire" without a second round trip. Exactly one of these is ever
+  // present per item.
+  customization?: Customization;
+  product?: Product;
 }
 
 export interface Order {
@@ -42,6 +79,9 @@ export interface Order {
   user_id: string;
   order_type: "standard" | "custom";
   status: OrderStatus;
+  // Raw JSONB text as stored — e.g. {"raw": "12 Lake Drive, Kandy"}.
+  // See formatShippingAddress in lib/format.ts to render it.
+  shipping_address?: string;
   total_amount: number;
   created_at: string;
   updated_at: string;
@@ -68,6 +108,35 @@ export interface PricingCatalog {
 export interface CustomOrderResult {
   order: Order;
   pricing: PricingBreakdown;
+}
+
+// PendingCustomOrder is what GET /api/v1/admin/orders/pending returns —
+// a flattened, read-optimized view (order + customer contact +
+// customization + line quantity/price in one row), not the same shape
+// as Order. See internal/models.PendingCustomOrder on the Go side.
+export interface PendingCustomOrder {
+  order_id: string;
+  user_id: string;
+  status: OrderStatus;
+  total_amount: number;
+  shipping_address?: string;
+  created_at: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  quantity: number;
+  unit_price: number;
+  customization: Customization;
+}
+
+// Payload for POST /api/v1/admin/orders/{id}/approve and .../decline.
+export interface DecisionRequest {
+  notes?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }
 
 export interface CustomOrderRequest {
