@@ -16,3 +16,12 @@ bin-release/
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
+
+# Local secrets. backend/.env holds DATABASE_URL and JWT_SECRET and must
+# never be committed; .env.example is the committed template.
+.env
+backend/.env
+
+# Local tooling scratch
+*.exe
+.DS_Store
