@@ -32,12 +32,31 @@ gem-store-backend/
 
 ## Setup
 
+The quickest path, assuming Docker:
+
+```bash
+docker compose up -d          # from the repo root — starts Postgres on host port 5434
+cd backend
+go run ./cmd/seedadmin   -email admin@gemstore.local -password "admin12345" -name "Store Owner"
+go run ./cmd/seedproducts -file seed/products.json
+go run ./cmd/api
+```
+
+Then `curl localhost:8081/health` should return `{"status":"ok"}`.
+
+`schema.sql` is mounted into the Postgres container's init directory, so
+the schema is applied automatically the first time the volume is created.
+If you edit `schema.sql` afterwards, drop the volume with
+`docker compose down -v` and bring it back up to re-apply it.
+
+### Manual / non-Docker
+
 1. **Postgres**: `createdb gemstore && psql -d gemstore -f schema.sql`
 2. **Go deps**: `go mod tidy` (resolves `go.mod`, writes `go.sum`)
 3. **Env vars**: `cp .env.example .env`, set `DATABASE_URL` and
    `JWT_SECRET` (`openssl rand -base64 32` — must be ≥32 characters,
    `config.Load` refuses to start without it)
-4. **Run**: `export $(cat .env | xargs) && go run ./cmd/api`
+4. **Run**: `go run ./cmd/api`
 5. **Bootstrap an admin** (public signup can never create one — see
    Security notes): `go run ./cmd/seedadmin -email owner@yourstore.com -password "..." -name "Store Owner"`
 6. **Seed the ready-made catalogue** (empty by default — nothing creates
@@ -69,6 +88,20 @@ sight-unseen into a coursework deliverable). Until real files exist at
 those paths, the frontend's `ProductImage` component falls back to a
 plain placeholder rather than a broken-image icon — see the frontend
 README.
+
+## Config loading
+
+`config.Load` (internal/config/config.go) reads a `.env` file from the
+working directory before falling back to defaults, so `go run ./cmd/api`
+works from a fresh checkout with no shell exports. Two rules keep that
+safe:
+
+- **A missing `.env` is not an error.** Real deployments (containers, CI,
+  systemd) inject the environment directly and have no `.env` at all.
+- **The real environment always wins.** A variable already present in the
+  process environment is never overwritten by `.env`, so
+  `DATABASE_URL=... go run ./cmd/api` stays authoritative over a stale
+  local file.
 
 ## API reference
 
