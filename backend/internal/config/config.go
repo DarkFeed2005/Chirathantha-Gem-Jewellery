@@ -4,9 +4,11 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -55,6 +57,8 @@ type Config struct {
 // variables that MUST be set explicitly — we refuse to guess credentials
 // or secrets.
 func Load() (*Config, error) {
+	loadDotEnv(".env")
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		return nil, fmt.Errorf("config: DATABASE_URL is required, e.g. " +
@@ -89,6 +93,62 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// loadDotEnv populates any unset environment variable from a `KEY=VALUE`
+// file, so `go run ./cmd/api` works from a fresh checkout without the
+// shell gymnastics the README used to prescribe (`export $(cat .env | xargs)`).
+//
+// Deliberately NOT a hard requirement, and deliberately never overwrites:
+//   - A missing .env is not an error. Real deployments (containers, CI,
+//     systemd) inject the environment directly and have no .env at all, so
+//     requiring one would break them.
+//   - Variables already present in the real environment win. That keeps
+//     `DATABASE_URL=... go run ./cmd/api` and container env injection
+//     authoritative, rather than a stale committed .env silently winning
+//     over what the operator explicitly asked for.
+//
+// This is a deliberate ~40-line stdlib-only parser rather than a godotenv
+// dependency: the whole format is "skip blanks/comments, split on the first
+// =", and taking a dependency for that isn't worth it.
+func loadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+
+		key, value, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+
+		value = strings.TrimSpace(value)
+		// Strip one layer of matching quotes, so a value containing
+		// spaces or a '#' survives intact.
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		if _, alreadySet := os.LookupEnv(key); !alreadySet {
+			_ = os.Setenv(key, value)
+		}
+	}
 }
 
 func getEnv(key, fallback string) string {
