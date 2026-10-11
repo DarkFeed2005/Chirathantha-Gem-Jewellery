@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gemstore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gemstore_user
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: gemstore
+    ports:
+      # Host port 5434, not the Postgres default 5432 — 5432 is commonly
+      # already taken by another local Postgres. The in-container port
+      # stays 5432; only the host side moves. If 5434 is taken on your
+      # machine, change the left-hand number AND the port in
+      # DATABASE_URL in backend/.env to match.
+      - "5434:5432"
+    volumes:
+      - gemstore-pgdata:/var/lib/postgresql/data
+      # Applied only on first init of an empty data directory, which is
+      # why backend/schema.sql is the canonical schema and the numbered
+      # files under backend/migrations/ are the incremental ones. If you
+      # change schema.sql after the first `docker compose up`, drop the
+      # volume (`docker compose down -v`) to re-init from scratch.
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gemstore_user -d gemstore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gemstore-pgdata:
